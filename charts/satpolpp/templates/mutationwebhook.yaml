@@ -1,6 +1,6 @@
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
-kind: MutatingWebhookConfiguration
+kind: ValidatingWebhookConfiguration
 metadata:
   name: {{ include "satpolpp.name" . }}-webhook
   namespace: {{ .Release.Namespace }}
@@ -10,20 +10,21 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 webhooks:
-  # - name: {{ include "satpolpp.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
-  #   clientConfig:
-  #     caBundle: {{ .Values.certs.caBundle }}
-  #     service:
-  #       name: {{ include "satpolpp.name" . }}
-  #       namespace: {{ .Release.Namespace }}
-  #       path: "/pods/check"
-  #   rules:
-  #     - operations: ["CREATE", "UPDATE"]
-  #       apiGroups: [""]
-  #       apiVersions: ["v1"]
-  #       resources: ["deployments", "jobs", "pods"]
-  #   namespaceSelector: {}
-  - name: {{ include "satpolpp.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  - name: podcheck-satpolpp.imrenagi.com
+    clientConfig:
+      caBundle: {{ .Values.certs.caBundle }}
+      service:
+        name: {{ include "satpolpp.name" . }}
+        namespace: {{ .Release.Namespace }}
+        path: "/pods/check"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["deployments", "pods"]
+        scope: "Namespaced"
+    namespaceSelector: {}
+  - name: configmapcheck-satpolpp.imrenagi.com
     clientConfig:
       caBundle: {{ .Values.certs.caBundle }}
       service:
@@ -31,8 +32,9 @@ webhooks:
         namespace: {{ .Release.Namespace }}
         path: "/configmaps/check"
     rules:
-      - operations: ["CREATE"]
+      - operations: ["CREATE", "UPDATE"]
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["configmaps"]
+        scope: "Namespaced"
     namespaceSelector: {}    

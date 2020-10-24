@@ -135,7 +135,7 @@ func NewServerCmd() *cobra.Command {
 		},
 	}
 
-	serverCmd.Flags().StringVar(&autoName, "auto-name", os.Getenv("SATPOLPP_AUTO_NAME"), "name of mutation admission hook resource")
+	serverCmd.Flags().StringVar(&autoName, "auto-name", os.Getenv("SATPOLPP_AUTO_NAME"), "name of admission hook resource")
 	serverCmd.Flags().StringVar(&autoHosts, "auto-hosts", os.Getenv("SATPOLPP_AUTO_HOST"), "all hosts name used for tls cert generation")
 	serverCmd.Flags().StringVar(&certFilePath, "tls-cert", os.Getenv("SATPOLPP_CERT_FILE_PATH"), "tls certificate path")
 	serverCmd.Flags().StringVar(&keyFilePath, "tls-key", os.Getenv("SATPOLPP_KEY_FILE_PATH"), "tls private key path")
@@ -171,15 +171,19 @@ func certWatcher(ctx context.Context, ch <-chan cert.Bundle, clientset *kubernet
 		if autoHosts != "" && len(bundle.CACert) > 0 {
 			value := base64.StdEncoding.EncodeToString(bundle.CACert)
 			_, err := clientset.AdmissionregistrationV1beta1().
-				MutatingWebhookConfigurations().
+				ValidatingWebhookConfigurations().
 				Patch(autoName, types.JSONPatchType, []byte(fmt.Sprintf(
 					`[{
 						"op": "add",
 						"path": "/webhooks/0/clientConfig/caBundle",
 						"value": %q
-					}]`, value)))
+					},{
+						"op": "add",
+						"path": "/webhooks/1/clientConfig/caBundle",
+						"value": %q
+					}]`, value, value)))
 			if err != nil {
-				log.Error().Err(err).Msg("Error updating MutatingWebhookConfiguration")
+				log.Error().Err(err).Msg("Error updating ValidatingWebhookConfiguration")
 				continue
 			}
 		}
