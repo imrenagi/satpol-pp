@@ -91,13 +91,11 @@ func NewServerCmd() *cobra.Command {
 			mux := http.NewServeMux()
 
 			mux.HandleFunc("/", home)
-			mux.HandleFunc("/pods/check", handler.PodCheckHandler())
-			// mux.HandleFunc("/deployments/check", handler.Handle)
+			mux.HandleFunc("/deployments/check", handler.DeploymentCheckHandler())
 			mux.HandleFunc("/configmaps/check", handler.ConfigMapCheckHandler())
 
 			// trusted docker registry
 			// liveness and readiness probe
-			// enough replica to serve traffic
 			// no secret or sensitive information stored in configmap
 
 			s := &http.Server{

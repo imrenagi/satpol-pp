@@ -10,18 +10,18 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 webhooks:
-  - name: podcheck-satpolpp.imrenagi.com
+  - name: deploymentcheck-satpolpp.imrenagi.com
     clientConfig:
       caBundle: {{ .Values.certs.caBundle }}
       service:
         name: {{ include "satpolpp.name" . }}
         namespace: {{ .Release.Namespace }}
-        path: "/pods/check"
+        path: "/deployments/check"
     rules:
       - operations: ["CREATE", "UPDATE"]
-        apiGroups: [""]
+        apiGroups: ["apps"]
         apiVersions: ["v1"]
-        resources: ["deployments", "pods"]
+        resources: ["deployments"]
         scope: "Namespaced"
     namespaceSelector: {}
   - name: configmapcheck-satpolpp.imrenagi.com

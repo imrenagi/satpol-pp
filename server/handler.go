@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/strutil"
-	cmAgent "github.com/imrenagi/satpol-pp/server/agent/configmap"
-	podAgent "github.com/imrenagi/satpol-pp/server/agent/pod"
+	cm "github.com/imrenagi/satpol-pp/server/agent/configmap"
+	dep "github.com/imrenagi/satpol-pp/server/agent/deployment"
 	"github.com/rs/zerolog"
 	"k8s.io/api/admission/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,18 +38,18 @@ type Handler struct {
 	Log       zerolog.Logger
 }
 
-// PodCheckHandler ...
-func (h *Handler) PodCheckHandler() http.HandlerFunc {
+// DeploymentCheckHandler ...
+func (h *Handler) DeploymentCheckHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		h.handle(w, r, h.checkPod)
+		h.handle(w, r, h.checkDeployment)
 	}
 }
 
-func (h *Handler) checkPod(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
-	var pod corev1.Pod
-	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
-		h.Log.Error().Err(err).Msg("could not unmarshal request to pod")
-		h.Log.Debug().Str("raw", string(req.Object.Raw)).Msg("pod manifest")
+func (h *Handler) checkDeployment(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
+	var deployment appsv1.Deployment
+	if err := json.Unmarshal(req.Object.Raw, &deployment); err != nil {
+		h.Log.Error().Err(err).Msg("could not unmarshal request to deployment")
+		h.Log.Debug().Str("raw", string(req.Object.Raw)).Msg("deployment manifest")
 		return &v1beta1.AdmissionResponse{
 			Result: &metav1.Status{
 				Message: err.Error(),
@@ -62,8 +63,8 @@ func (h *Handler) checkPod(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResp
 		UID:     req.UID,
 	}
 
-	h.Log.Debug().Msg("checking if should ignore this pod")
-	ignore, err := podAgent.ShouldIgnore(pod)
+	h.Log.Debug().Msg("checking if should ignore this deployment")
+	ignore, err := dep.ShouldIgnore(deployment)
 	if err != nil && !strings.Contains(err.Error(), "no inject annotation found") {
 		err := fmt.Errorf("error checking if should ignore this pod: %s", err)
 		return admissionError(err)
@@ -73,27 +74,34 @@ func (h *Handler) checkPod(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResp
 
 	h.Log.Debug().Msg("checking namespaces..")
 	if strutil.StrListContains(kubeSystemNamespaces, req.Namespace) {
-		reviewResponse.Allowed = true
 		return reviewResponse
 	}
 
-	whitelistedRegistry := []string{"gcr.io/imre-demo"}
-
-	var validRegistry bool
-	for _, container := range pod.Spec.Containers {
-		for _, registry := range whitelistedRegistry {
-			if strings.Contains(container.Image, registry) {
-				validRegistry = true
-				break
-			}
-		}
+	var agentCfg dep.AgentConfig
+	err = dep.Init(&agentCfg)
+	if err != nil {
+		err := fmt.Errorf("failed when init deployment agent config")
+		return admissionError(err)
 	}
 
-	if !validRegistry {
-		h.Log.Debug().Msg("image registry is not allowed")
+	agent, err := dep.New(&agentCfg)
+	if err != nil {
+		err := fmt.Errorf("failed when creating agent for deployment validator")
+		return admissionError(err)
+	}
+
+	if err := agent.ValidRegistry(deployment.Spec.Template.Spec); err != nil {
+		h.Log.Warn().Err(err).Msg("pod contains unidentified registry")
 		reviewResponse.Allowed = false
-		reviewResponse.Result = &metav1.Status{Message: "image registry is not allowed"}
+		reviewResponse.Result = &metav1.Status{Message: err.Error()}
 	}
+
+	if err := agent.ValidProbe(deployment.Spec.Template.Spec); err != nil {
+		h.Log.Warn().Err(err).Msg("pod has no valid probe")
+		reviewResponse.Allowed = false
+		reviewResponse.Result = &metav1.Status{Message: err.Error()}
+	}
+
 	return reviewResponse
 }
 
@@ -126,7 +134,7 @@ func (h *Handler) checkConfigMap(req *v1beta1.AdmissionRequest) *v1beta1.Admissi
 	}
 
 	h.Log.Debug().Msg("checking if should ignore this configmap")
-	check, err := cmAgent.ShouldCheck(configmap)
+	check, err := cm.ShouldCheck(configmap)
 	if err != nil && !strings.Contains(err.Error(), "no inject annotation found") {
 		err := fmt.Errorf("error checking if should ignore this configmap: %s", err)
 		return admissionError(err)
@@ -139,11 +147,11 @@ func (h *Handler) checkConfigMap(req *v1beta1.AdmissionRequest) *v1beta1.Admissi
 		return reviewResponse
 	}
 
-	agentCfg := &cmAgent.AgentConfig{
+	agentCfg := &cm.AgentConfig{
 		GoogleProjectID: "imre-demo",
 	}
 
-	agent, err := cmAgent.New(agentCfg)
+	agent, err := cm.New(agentCfg)
 	if err != nil {
 		return admissionError(err)
 	}
