@@ -1,0 +1,50 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "satpolpp.name" . }}-clusterrole
+  labels:
+    app.kubernetes.io/name: {{ include "satpolpp.name" . }}
+    helm.sh/chart: {{ include "satpolpp.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+rules:
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["mutatingwebhookconfigurations"]
+  verbs: 
+    - "get"
+    - "list"
+    - "watch"
+    - "patch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "satpolpp.name" . }}-rolebinding
+  labels:
+    app.kubernetes.io/name: {{ include "satpolpp.name" . }}
+    helm.sh/chart: {{ include "satpolpp.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "satpolpp.name" . }}-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: {{ include "satpolpp.name" . }}
+  namespace: {{ .Release.Namespace }}
+---
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "satpolpp.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "satpolpp.name" . }}
+    helm.sh/chart: {{ include "satpolpp.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end -}}   

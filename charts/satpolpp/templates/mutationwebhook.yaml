@@ -1,0 +1,38 @@
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "satpolpp.name" . }}-webhook
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "satpolpp.name" . }}
+    helm.sh/chart: {{ include "satpolpp.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+webhooks:
+  - name: {{ include "satpolpp.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+    clientConfig:
+      caBundle: {{ .Values.certs.caBundle }}
+      service:
+        name: {{ include "satpolpp.name" . }}
+        namespace: {{ .Release.Namespace }}
+        path: "/pods/check"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["deployments", "jobs", "pods"]
+    namespaceSelector: {}
+  - name: {{ include "satpolpp.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+    clientConfig:
+      caBundle: {{ .Values.certs.caBundle }}
+      service:
+        name: {{ include "satpolpp.name" . }}
+        namespace: {{ .Release.Namespace }}
+        path: "/configmaps/check"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["configmap"]
+    namespaceSelector: {}    
