@@ -4,7 +4,9 @@ metadata:
   name: static-web
   labels:
     role: myrole
-  namespace: default  
+  namespace: default 
+  # annotations:
+  #   satpolpp.imrenagi.com/ignore-check: "true" 
 spec:
   serviceAccountName: static-web
   containers:

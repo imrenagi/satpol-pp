@@ -15,3 +15,5 @@
 vendor/
 _output/
 bin/
+sample/secret.yaml
+sample/cm.yaml

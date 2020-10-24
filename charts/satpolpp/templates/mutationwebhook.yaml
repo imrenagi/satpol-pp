@@ -10,19 +10,19 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 webhooks:
-  - name: {{ include "satpolpp.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
-    clientConfig:
-      caBundle: {{ .Values.certs.caBundle }}
-      service:
-        name: {{ include "satpolpp.name" . }}
-        namespace: {{ .Release.Namespace }}
-        path: "/pods/check"
-    rules:
-      - operations: ["CREATE", "UPDATE"]
-        apiGroups: [""]
-        apiVersions: ["v1"]
-        resources: ["deployments", "jobs", "pods"]
-    namespaceSelector: {}
+  # - name: {{ include "satpolpp.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  #   clientConfig:
+  #     caBundle: {{ .Values.certs.caBundle }}
+  #     service:
+  #       name: {{ include "satpolpp.name" . }}
+  #       namespace: {{ .Release.Namespace }}
+  #       path: "/pods/check"
+  #   rules:
+  #     - operations: ["CREATE", "UPDATE"]
+  #       apiGroups: [""]
+  #       apiVersions: ["v1"]
+  #       resources: ["deployments", "jobs", "pods"]
+  #   namespaceSelector: {}
   - name: {{ include "satpolpp.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
     clientConfig:
       caBundle: {{ .Values.certs.caBundle }}
@@ -31,8 +31,8 @@ webhooks:
         namespace: {{ .Release.Namespace }}
         path: "/configmaps/check"
     rules:
-      - operations: ["CREATE", "UPDATE"]
+      - operations: ["CREATE"]
         apiGroups: [""]
         apiVersions: ["v1"]
-        resources: ["configmap"]
+        resources: ["configmaps"]
     namespaceSelector: {}    

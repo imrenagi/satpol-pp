@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/strutil"
+	cmAgent "github.com/imrenagi/satpol-pp/server/agent/configmap"
 	podAgent "github.com/imrenagi/satpol-pp/server/agent/pod"
 	"github.com/rs/zerolog"
 	"k8s.io/api/admission/v1beta1"
@@ -104,7 +105,57 @@ func (h *Handler) ConfigMapCheckHandler() http.HandlerFunc {
 }
 
 func (h *Handler) checkConfigMap(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
-	return &v1beta1.AdmissionResponse{}
+
+	h.Log.Debug().Msg("executing configmap handler")
+
+	var configmap corev1.ConfigMap
+	if err := json.Unmarshal(req.Object.Raw, &configmap); err != nil {
+		h.Log.Error().Err(err).Msg("could not unmarshal request to configmap")
+		h.Log.Debug().Str("raw", string(req.Object.Raw)).Msg("configmap manifest")
+		return &v1beta1.AdmissionResponse{
+			Result: &metav1.Status{
+				Message: err.Error(),
+			},
+		}
+	}
+
+	// Build the basic response
+	reviewResponse := &v1beta1.AdmissionResponse{
+		Allowed: true,
+		UID:     req.UID,
+	}
+
+	h.Log.Debug().Msg("checking if should ignore this configmap")
+	check, err := cmAgent.ShouldCheck(configmap)
+	if err != nil && !strings.Contains(err.Error(), "no inject annotation found") {
+		err := fmt.Errorf("error checking if should ignore this configmap: %s", err)
+		return admissionError(err)
+	} else if !check {
+		return reviewResponse
+	}
+
+	h.Log.Debug().Msg("checking namespaces..")
+	if strutil.StrListContains(kubeSystemNamespaces, req.Namespace) {
+		return reviewResponse
+	}
+
+	agentCfg := &cmAgent.AgentConfig{
+		GoogleProjectID: "imre-demo",
+	}
+
+	agent, err := cmAgent.New(agentCfg)
+	if err != nil {
+		return admissionError(err)
+	}
+
+	err = agent.Validate(configmap)
+	if err != nil {
+		h.Log.Debug().Msg("configmap is not valid")
+		reviewResponse.Allowed = false
+		reviewResponse.Result = &metav1.Status{Message: err.Error()}
+	}
+
+	return reviewResponse
 }
 
 type admissionFunc func(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse

@@ -23,6 +23,10 @@ spec:
         app.kubernetes.io/managed-by: {{ .Release.Service }}
     spec:
       serviceAccountName: {{ include "satpolpp.serviceAccountName" . }}
+      volumes:
+      - name: gcp-secret
+        secret:
+          secretName: gcp-creds    
       containers:
       - name: satpolpp
         image: {{ .Values.image.repository }}
@@ -38,6 +42,12 @@ spec:
             value: {{ include "satpolpp.name" . }}-webhook
           - name: SATPOLPP_AUTO_HOST
             value: "{{ include "satpolpp.name" . }},{{ include "satpolpp.name" . }}.{{ .Release.Namespace }},{{ include "satpolpp.name" . }}.{{ .Release.Namespace }}.svc"
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /google/sa/key.json
+        volumeMounts:
+        - name: gcp-secret
+          mountPath: "/google/sa"
+          readOnly: true        
         livenessProbe:
           httpGet:
             path: /

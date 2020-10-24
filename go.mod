@@ -3,7 +3,10 @@ module github.com/imrenagi/satpol-pp
 go 1.15
 
 require (
+	cloud.google.com/go v0.70.0
+	contrib.go.opencensus.io/exporter/stackdriver v0.13.4 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/googleapis/gax-go v1.0.3 // indirect
 	github.com/hashicorp/go-hclog v0.14.1
 	github.com/hashicorp/vault v0.10.3
 	github.com/hashicorp/vault-k8s v0.5.0
@@ -14,7 +17,9 @@ require (
 	github.com/rs/zerolog v1.19.0
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.4.0
+	go.opencensus.io v0.22.5 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.1.0
+	google.golang.org/genproto v0.0.0-20201022181438-0ff5f38871d5
 	k8s.io/api v0.0.0-20190409021203-6e4e0e4f393b
 	k8s.io/apimachinery v0.0.0-20190404173353-6a84e37a896d
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible

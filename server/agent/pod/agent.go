@@ -23,7 +23,7 @@ func New(pod *corev1.Pod) (*Agent, error) {
 
 // ShouldIgnore ignore this pod from validation
 func ShouldIgnore(pod corev1.Pod) (bool, error) {
-	raw, ok := pod.Annotations[agent.AnnotationIgnorePodCheck]
+	raw, ok := pod.Annotations[agent.AnnotationIgnoreCheck]
 	if !ok {
 		return false, nil
 	}

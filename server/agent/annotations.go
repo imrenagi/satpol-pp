@@ -1,5 +1,6 @@
 package agent
 
 const (
-	AnnotationIgnorePodCheck = "satpolpp.imrenagi.com/ignore-check"
+	AnnotationIgnoreCheck = "satpolpp.imrenagi.com/ignore-check"
+	AnnotationShouldCheck = "satpolpp.imrenagi.com/should-check"
 )

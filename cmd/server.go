@@ -91,10 +91,9 @@ func NewServerCmd() *cobra.Command {
 			mux := http.NewServeMux()
 
 			mux.HandleFunc("/", home)
-
 			mux.HandleFunc("/pods/check", handler.PodCheckHandler())
 			// mux.HandleFunc("/deployments/check", handler.Handle)
-			// mux.HandleFunc("/configmaps/check", handler.Handle)
+			mux.HandleFunc("/configmaps/check", handler.ConfigMapCheckHandler())
 
 			// trusted docker registry
 			// liveness and readiness probe
